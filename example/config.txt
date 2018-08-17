@@ -1,0 +1,3 @@
+# Metagenomics analysis pipeline: Early
+Prefix plugins/Mothur/example/data/Early
+Plugin Mothur inputfile Early.mothur outputfile Early

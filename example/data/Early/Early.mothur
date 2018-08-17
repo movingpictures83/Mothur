@@ -1,0 +1,92 @@
+###########################################################################
+# Set plugins/Mothur/example/data/Early directory
+set.dir(output=plugins/Mothur/example/data/Early/)
+set.seed(seed=1234)  # Testing purposes
+###########################################################################
+
+###########################################################################
+# Take forward and reverse sequences, complement reverse, make contigs
+make.contigs(file=plugins/Mothur/example/data/Early/Early.files, processors=8)
+#summary.seqs(fasta=Early.trim.contigs.fasta, processors=8)
+###########################################################################
+
+###########################################################################
+# Denoising
+#
+# Step 1: Remove sequences that are longer than 16S region
+#         Remove sequences that have ambiguous bases
+screen.seqs(fasta=current, group=plugins/Mothur/example/data/Early/Early.contigs.groups, summary=current, maxambig=0, maxlength=275)
+# Step 2: Remove duplicate sequences
+unique.seqs(fasta=current)
+# Step 3: For each sequence, count the number of groups in which it belongs
+count.seqs(name=current, group=current)
+#summary.seqs(count=current)
+# Step 4: Align to Reference Database
+#    a. Simplify reference plugins/Mothur/example/database to only use our region
+#       TMC -- since this will differ for every run, I generalized it and left this out
+#       Output is the same, I have verified it
+#pcr.seqs(fasta=/biorg/plugins/Mothur/example/data/Stability/silva.bacteria.fasta, start=11894, end=25319, keepdots=F, processors=8)
+#pcr.seqs(fasta=/biorg/plugins/Mothur/example/data/Stability/silva.bacteria.fasta, keepdots=F, processors=8)
+#system(cp plugins/Mothur/example/data/Early/silva.bacteria.pcr.fasta plugins/Mothur/example/data/Early/silva.v4.fasta)
+#summary.seqs(fasta=silva.v4.fasta)
+#    b. Align to simplified reference plugins/Mothur/example/database
+#align.seqs(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.fasta, reference=plugins/Mothur/example/data/Early/silva.v4.fasta)
+align.seqs(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.fasta, reference=plugins/Mothur/example/silva.bacteria.fasta)
+summary.seqs(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.align, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.count_table)
+# Step 5: Remove sequences that do not align to the same region (TMC I believe this will differ between runs)a
+screen.seqs(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.align, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.count_table, summary=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.summary, start=13862, end=23444, maxhomop=8)
+#summary.seqs(fasta=Early.trim.contigs.good.unique.good.align, count=Early.trim.contigs.good.good.count_table)
+# Step 6: Remove extra terminal nucleotides and gaps
+filter.seqs(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.align, vertical=T, trump=.)
+# Step 7: Be sure sequences are still unique after the alignment
+unique.seqs(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.fasta, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.good.count_table)
+# Step 8: Count sequences with two or fewer differences as the same, remove one of them
+pre.cluster(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.fasta, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.count_table, diffs=2)
+# Step 9: Remove known chimeric sequences
+# NOTE: Depending on the release of vsearch this can be slightly different than the tutorial.  Should be a *minimal* (no more than a few sequences) difference
+chimera.vsearch(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.fasta, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.count_table, dereplicate=t)
+remove.seqs(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.fasta, accnos=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.accnos)
+# Step 10: Remove any sequences that are not bacteria
+# TMC NOTE: The newer Mothur will automatically generate plugins/Mothur/example/data/Early files in the same folder as the plugins/Mothur/example/databases
+# And it's not controllable through set.dir.  Thus -- you need the reference and taxonomy in your local folder now
+classify.seqs(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.count_table, reference=plugins/Mothur/example/input/trainset9_032012.pds.fasta, taxonomy=plugins/Mothur/example/input/trainset9_032012.pds.tax, cutoff=80)
+remove.lineage(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.count_table, taxonomy=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pds.wang.taxonomy, taxon=Chloroplast-Mitochondria-unknown-Archaea-Eukaryota)
+#summary.tax(taxonomy=current, count=current)
+# Step 11: Separate abundant and rare sequences (TMC leaving out)
+#split.abund(fasta=Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, count=Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.count_table, cutoff=1)
+#summary.seqs(fasta=Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.abund.fasta, count=Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.abund.count_table, processors=8)
+###########################################################################
+
+###########################################################################
+# Check error rates
+#get.groups(count=current, fasta=current, groups=Mock)
+#seq.error(fasta=current, reference=/biorg/plugins/Mothur/example/data/Stability/HMP_MOCK.v35.fasta, aligned=F)
+###########################################################################
+
+
+###########################################################################
+# Cluster
+#
+# 1. Bin based on taxonomy (This goes based on Order)
+remove.groups(count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.pick.count_table, fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.fasta, taxonomy=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pds.wang.pick.taxonomy, groups=Mock)
+cluster.split(fasta=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.fasta, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.pick.pick.count_table, taxonomy=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pds.wang.pick.pick.taxonomy, splitmethod=classify, taxlevel=4, cutoff=0.03)
+# 2. Count sequences in each OTU
+#make.shared(list=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.opti_mcc.unique_list.list, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.pick.pick.count_table, label=0.03)
+system(cp plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.opti_mcc.unique_list.list plugins/Mothur/example/data/Early/Early.unique_list.list)
+make.shared(list=plugins/Mothur/example/data/Early/Early.unique_list.list, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.pick.pick.count_table, label=0.03)
+system(cp plugins/Mothur/example/data/Early/Early.unique_list.shared plugins/Mothur/example/data/Early/Early.shared)
+###########################################################################
+
+
+###########################################################################
+# 3. Labeling
+#classify.otu(list=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.opti_mcc.unique_list.list, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.pick.pick.count_table, taxonomy=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pds.wang.pick.pick.taxonomy, label=0.03)
+classify.otu(list=plugins/Mothur/example/data/Early/Early.unique_list.list, count=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.pick.pick.count_table, taxonomy=plugins/Mothur/example/data/Early/Early.trim.contigs.good.unique.good.filter.unique.precluster.pick.pds.wang.pick.pick.taxonomy, label=0.03)
+system(cp plugins/Mothur/example/data/Early/Early.unique_list.0.03.cons.taxonomy plugins/Mothur/example/Early.taxonomy)
+system(cp plugins/Mothur/example/data/Early/Early.unique_list.0.03.cons.tax.summary plugins/Mothur/example/Early.tax.summary)
+###########################################################################
+
+
+
+
+
