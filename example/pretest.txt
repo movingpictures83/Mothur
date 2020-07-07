@@ -1,0 +1,2 @@
+bash -c "unzip plugins/Mothur/example/silva.bacteria.fasta.zip >& /dev/null"
+mv silva.bacteria.fasta plugins/Mothur/example/
