@@ -15,7 +15,8 @@ public:
 
 private: 
  std::string myInputFile;
-
+ bool myIterMode;
+ std::map<std::string, std::string> parameters;
 };
 
 #endif
